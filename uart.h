@@ -15,6 +15,9 @@ void usart_init(uint16_t baudin, uint32_t clk_speedin);
  * Send a single byte of data over UART
  */
 void usart_send( uint8_t data );
+
+void uart_str(char* out);
+
 /*
  * Receive a byte over UART
  * Blocks until input is actually received, so checking istheredata() first

@@ -13,6 +13,16 @@ void usart_init(uint16_t baudin, uint32_t clk_speedin)
    UCSR0A &= ~(1<<U2X0);
 }
 
+void uart_str(char* out)
+{
+   int i = 0;
+
+   while (out[i] != '\0') {
+      usart_send(out[i]);
+      i++;
+   }
+}
+
 /*the send function will put 8bits on the trans line. */
 void usart_send( uint8_t data )
 {

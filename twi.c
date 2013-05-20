@@ -104,7 +104,8 @@ int read_reg_multiple(unsigned char* store, int regAdd, unsigned char count)
 //return data value read on success, -1 on failure
 int read_reg(int regAdd){
 
-   int returnVal, data;
+   int returnVal;
+   unsigned char data;
 
    returnVal = read_reg_multiple(&data, regAdd, 1);
    if (returnVal == 0) {
