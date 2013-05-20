@@ -1,0 +1,18 @@
+# General C files
+*.o
+*.out
+*.lib
+*.a
+
+# Arduino Stuff
+*.elf
+*.bin
+*.hex
+*.lst
+*.map
+*.srec
+
+# Other
+*.png
+*.pdf
+*.bak
