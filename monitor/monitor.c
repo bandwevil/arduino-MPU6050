@@ -31,7 +31,7 @@ int main()
       exit(EXIT_FAILURE);
    }
 
-   sleep(1);
+   sleep(1); //Wait for transmission to end
    fflush(file); //Clear any pending data from before reboot
 
    //Read success/failure from device
@@ -62,6 +62,7 @@ int main()
    mvprintw(0, 25, "Controls");
    attroff(A_UNDERLINE);
 
+   //Print controls and their initial settings
    mvprintw(1, 25, "q: quit");
    mvprintw(2, 25, "a: accelerometer range ± 2g");
    mvprintw(3, 25, "g: gyroscope range     ± 250°/s");
@@ -74,8 +75,9 @@ int main()
          data = (upper << 8) | lower;
          outputData(posData, in, ((double)data));
       }
-      switch (getch()) {
-         case 'q':
+
+      switch (getch()) { //Check input for controls, act as necessary
+         case 'q': //Quit out of ncurses
             endwin();
             fclose(file);
             exit(EXIT_SUCCESS);
@@ -109,6 +111,9 @@ int main()
    return EXIT_SUCCESS;
 }
 
+/*
+ * Toggle between low and standard power.
+ */
 void togglePower()
 {
    if (powerState == 0) {
@@ -119,6 +124,10 @@ void togglePower()
       powerState = 0;
    }
 }
+
+/*
+ * Switch between accelerometer range settings and modify the display as necessary
+ */
 void nextAccelRange()
 {
    switch(accelSensitivity) {
@@ -142,6 +151,9 @@ void nextAccelRange()
    }
 }
 
+/*
+ * Switch between gyro range settings and modify the display as necessary
+ */
 void nextGyroRange()
 {
    switch((int)gyroSensitivity) {
@@ -165,7 +177,11 @@ void nextGyroRange()
    }
 }
 
-
+/*
+ * Take a 16 bit word and display it onscreen according to the message identifier
+ * in and its location in the position array. If in is not in the position
+ * array, nothing is changed
+ */
 void outputData(int* position, int in, double data)
 {
    int i;

@@ -1,6 +1,9 @@
 #include "uart.h"
 
 
+/*
+ * Initialize the UART communications for the given baud and speed
+ */
 void usart_init(uint16_t baudin, uint32_t clk_speedin)
 {
    uint32_t ubrr = (clk_speedin/16UL)/baudin-1;
@@ -13,6 +16,10 @@ void usart_init(uint16_t baudin, uint32_t clk_speedin)
    UCSR0A &= ~(1<<U2X0);
 }
 
+/*
+ * Send an array of characters over UART
+ * this is simply a wrapper that repeats usart_send() as needed
+ */
 void uart_str(char* out)
 {
    int i = 0;
@@ -23,7 +30,9 @@ void uart_str(char* out)
    }
 }
 
-/*the send function will put 8bits on the trans line. */
+/*
+ * Send a single byte of data over UART
+ */
 void usart_send( uint8_t data )
 {
    /* Wait for empty transmit buffer */

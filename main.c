@@ -26,6 +26,12 @@ void changePower();
 
 char newData;
 
+/*
+ * main: overall program flow control
+ *
+ * initializes UART, I2C interfaces for standard control, then loops while
+ * transmitting current register values and looking for inputs.
+ */
 int main()
 {
    int in = 0;
@@ -34,9 +40,6 @@ int main()
 
    DDRC = 0xFF;   // Port C contains the pins for i2c
    DDRB = 1<<5;
-
-   DDRD &= ~(1<<PD2); //Pin D2 as input for interrupts
-   PORTD |= 1<<PD2;
 
    usart_init(9600, F_CPU );
 
@@ -48,31 +51,17 @@ int main()
 
    _delay_ms(1000);//Wait for power up and monitor connection
 
-   usart_send('R'); //Reset indicator
+   usart_send('R'); //Send reset indicator
    if ((in = read_reg(0x75)) == 0x68) {
       uart_str("Found MPU!\n");
    } else {
       uart_str("init error, got value: ");
       usart_send(in);
-      usart_send('\0');
+      usart_send('\0'); //Send null byte to ensure monitor is killed
       return 0;
    }
 
    write_reg(0x6B, 0x02); //Disable sleep, use Y gyro for clocking
-
-/*
- *   //Code to enable interrupts, non-functional at the moment
- *
- *   write_reg(0x38, 0x40); //Enable motion interrupts
- *   write_reg(0x37, 0x60); //Interrupt is held until cleared, active high
- *   write_reg(0x1F, 20);   //Detect motion larger than 32mg*20=0.64g
- *   _delay_ms(2);          //Short delay to accumulate samples
- *   write_reg(0x6C, 0xC0); //Wakeup frequency of 40 Hz
- *   write_reg(0x6B, 0x22); //Enable sleeping between polls
- *   initPCINT(); //Enable interrupts on D2 (PCINT18)
- *   sei();
- */
-
 
    while (1) {
       if (newData == 1) {
@@ -90,18 +79,17 @@ int main()
       //parse control inputs
       while (usart_istheredata()) {
          switch (usart_recv()) {
-            case 'a':
+            case 'a': //Change accelerometer full-scale range
                nextRange(0x1C);
                break;
-            case 'g':
+            case 'g': //Change gyro full-scale range
                nextRange(0x1B);
                break;
-            case 't':
+            case 't': //Start self testing
                startSelfTest();
                break;
-            case 'p':
+            case 'p': //Modify power setting
                changePower();
-               PORTB ^= 1 << 5;
                break;
          }
       }
@@ -110,6 +98,10 @@ int main()
    return 0;
 }
 
+/*
+ * changePower: toggle between standard and low power interfaces
+ * reads the current setting of cycle and writes based on that
+ */
 void changePower()
 {
    if ((read_reg(0x6B) & 0x20) == 0) {
@@ -121,26 +113,22 @@ void changePower()
    }
 }
 
-void initPCINT(void)
-{
-   PCICR |= (1<<2);  // enable PCINT23..16
-   PCMSK2 |= (1<<2); // enable PCINT18 interrupt
-   PCIFR |= 0x04;  // clear previous interrupts
-}
-
-ISR(PCINT2_vect)
-{
-   read_reg(0x3A); // Clear interrupt status on MPU
-   newData = 1;
-   PCIFR |= 0x04;  // clear pending interrupts
-}
-
+/*
+ * Run built-in self test on all accelerometers and gyros
+ */
 void startSelfTest()
 {
    write_reg(0x1B, 0xE0);
    write_reg(0x1C, 0xF0);
 }
 
+/*
+ * Switch the range setting of the gyro or accelerometer
+ *
+ * parameters:
+ * reg - the register to modify, either 0x1B or 0x1C
+ *       undefined operation for other values.
+ */
 void nextRange(char reg)
 {
    char in;
@@ -153,6 +141,11 @@ void nextRange(char reg)
    write_reg(reg, in << 3);
 }
 
+/*
+ * Send the standard format of message over UART connection
+ * message is 3 bytes long, one byte as a message identifier and then a 16 bit
+ * number representing the data.
+ */
 void messageSend(char tag, int dataUp, int dataDown)
 {
    usart_send(tag);

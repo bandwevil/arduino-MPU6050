@@ -16,6 +16,10 @@ void usart_init(uint16_t baudin, uint32_t clk_speedin);
  */
 void usart_send( uint8_t data );
 
+/*
+ * Send an array of characters over UART
+ * this is simply a wrapper that repeats usart_send() as needed
+ */
 void uart_str(char* out);
 
 /*
