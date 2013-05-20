@@ -19,6 +19,7 @@
 #include "twi.h"
 
 void uart_str(char* out);
+void messageSend(char tag, int dataUp, int dataDown);
 
 int main()
 {
@@ -37,7 +38,7 @@ int main()
 
    _delay_ms(1500);//Wait for power up and monitor connection
 
-   usart_send('r'); //Reset indicator
+   usart_send('R'); //Reset indicator
    if ((in = read_reg(0x75)) == 0x68) {
       uart_str("Found MPU!\n");
    } else {
@@ -47,23 +48,29 @@ int main()
       return 0;
    }
 
-   write_reg(0x6B, 0x03); //Disable sleep, use Z gyro for clocking
+   write_reg(0x6B, 0x00); //Disable sleep, use Z gyro for clocking
 
    while (1) {
       i = 0;
-      read_reg_multiple(data, 0x3B, 6);
-      usart_send('x');
-      usart_send(data[i++]);
-      usart_send(data[i++]);
-      usart_send('y');
-      usart_send(data[i++]);
-      usart_send(data[i++]);
-      usart_send('z');
-      usart_send(data[i++]);
-      usart_send(data[i++]);
+      read_reg_multiple(data, 0x3B, 6); //Read the accelerometer registers
+      messageSend('x', data[0], data[1]);
+      messageSend('y', data[2], data[3]);
+      messageSend('z', data[3], data[4]);
+
+      read_reg_multiple(data, 0x43, 6); //Read the gyroscope registers
+      messageSend('r', data[0], data[1]);
+      messageSend('p', data[2], data[3]);
+      messageSend('Y', data[3], data[4]);
    }
 
    return 0;
+}
+
+void messageSend(char tag, int dataUp, int dataDown)
+{
+   usart_send(tag);
+   usart_send(dataUp);
+   usart_send(dataDown);
 }
 
 void uart_str(char* out)

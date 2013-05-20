@@ -75,26 +75,12 @@ int read_reg_multiple(unsigned char* store, int regAdd, unsigned char count)
       return -5;
    }
 
-   /*if (count == 1) { //Only reading 1 byte*/
-      /*// send address, return NACK after data recieved*/
-      /*TWCR = (1<<TWINT) | (1<<TWEN);*/
-   /*} else {*/
-      /*// send address, return ACK after data recieved*/
-      /*TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);*/
-   /*}*/
-
-   /*// wait for data to be sent*/
-   /*while( !(TWCR & (1<<TWINT)) ){*/
-   /*}*/
-
-   /*// read data*/
-   /*store[i] = TWDR;*/
-   /*i++;*/
-
    while (i < count) {
       if (i == count-1) {
+         //Send address, NACK after data recieved to end transmission
          TWCR = (1<<TWINT) | (1<<TWEN);
       } else {
+         //Send address, ACK ofter data recieved to continue tramsission
          TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWEA);
       }
 
@@ -118,94 +104,14 @@ int read_reg_multiple(unsigned char* store, int regAdd, unsigned char count)
 //return data value read on success, -1 on failure
 int read_reg(int regAdd){
 
-   int data;
+   int returnVal, data;
 
-   // send start condition
-   TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
-
-   // wait to see of start condition has been transmitted
-   while(!(TWCR & (1<<TWINT)) ){
+   returnVal = read_reg_multiple(&data, regAdd, 1);
+   if (returnVal == 0) {
+      return data;
+   } else {
+      return returnVal;
    }
-
-   // check if status is no "start"
-   if ((TWSR & 0xF8) != 0x08) {
-      return -1;
-   }
-
-   // slave address to write to
-   TWDR = (0x68<<1) | TW_WRITE;
-
-   // send device address
-   TWCR = (1<<TWINT) | (1<<TWEN);
-
-   //Wait for ACK/NACK
-   while( !(TWCR & (1<<TWINT)) ){
-   }
-
-   // check for aknowledgement
-   if ((TWSR & 0xF8) != 0x18) {
-      if ((TWSR & 0xF8) == 0x20) {
-         return -3;
-      }
-      return -2;
-   }
-
-   // set device register address
-   TWDR = regAdd;
-
-   //send device register address
-   TWCR = (1<<TWINT) | (1<<TWEN);
-
-   // wait to see of start condition has been transmitted
-   while( !(TWCR & (1<<TWINT)) ){
-   }
-
-   // check for aknowledgement
-   if( TW_STATUS != TW_MT_DATA_ACK ){
-      return -3;
-   }
-
-   // repeated start
-   TWCR = (1<<TWINT) | (1<<TWSTA) | (1<<TWEN);
-
-   // wait to see of start condition has been transmitted
-   while( !(TWCR & (1<<TWINT)) ){
-   }
-
-   // check if status is no "repeated start"
-   if( TW_STATUS != TW_REP_START ){
-      return -4;
-   }
-
-   // slave address to read from
-   TWDR = (0x68<<1) | TW_READ;
-
-   // send address
-   TWCR = (1<<TWINT) | (1<<TWEN);
-
-   // wait for address to be sent
-   while( !(TWCR & (1<<TWINT)) ){
-   }
-
-   // check for a
-   if( TW_STATUS != TW_MR_SLA_ACK ){
-      return -5;
-   }
-
-
-   TWCR = (1<<TWINT) | (1<<TWEN);
-
-   // wait for data to be sent
-   while( !(TWCR & (1<<TWINT)) ){
-   }
-
-   // read data
-   data = TWDR;
-
-   // transmit STOP
-   TWCR = (1<<TWINT) | (1<<TWEN) | (1<<TWSTO); 
-
-   return data;
 }
 
 
