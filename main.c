@@ -22,6 +22,7 @@ void messageSend(char tag, int dataUp, int dataDown);
 void nextRange(char reg);
 void startSelfTest();
 void initPCINT();
+void changePower();
 
 char newData;
 
@@ -32,6 +33,7 @@ int main()
    newData = 1;
 
    DDRC = 0xFF;   // Port C contains the pins for i2c
+   DDRB = 1<<5;
 
    DDRD &= ~(1<<PD2); //Pin D2 as input for interrupts
    PORTD |= 1<<PD2;
@@ -44,7 +46,7 @@ int main()
    TWBR = 3;
    TWSR = 1;
 
-   _delay_ms(500);//Wait for power up and monitor connection
+   _delay_ms(1000);//Wait for power up and monitor connection
 
    usart_send('R'); //Reset indicator
    if ((in = read_reg(0x75)) == 0x68) {
@@ -97,11 +99,26 @@ int main()
             case 't':
                startSelfTest();
                break;
+            case 'p':
+               changePower();
+               PORTB ^= 1 << 5;
+               break;
          }
       }
    }
 
    return 0;
+}
+
+void changePower()
+{
+   if ((read_reg(0x6B) & 0x20) == 0) {
+      write_reg(0x6B, 0x24); //Enable cycle, disable temp, use internal clock
+      write_reg(0x6C, 0x37); //Wakeup of 40 Hz, disable gyroscopes
+   } else {
+      write_reg(0x6C, 0x00); //Enable all components
+      write_reg(0x6B, 0x02); //Disable cycle, revert to Y gyro clock source
+   }
 }
 
 void initPCINT(void)

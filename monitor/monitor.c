@@ -10,9 +10,11 @@
 void outputData(int* position, int in, double data);
 void nextAccelRange();
 void nextGyroRange();
+void togglePower();
 
 int accelSensitivity = 16384;
 double gyroSensitivity = 131;
+char powerState = 0;
 
 int main()
 {
@@ -29,6 +31,7 @@ int main()
       exit(EXIT_FAILURE);
    }
 
+   sleep(1);
    fflush(file); //Clear any pending data from before reboot
 
    //Read success/failure from device
@@ -62,6 +65,7 @@ int main()
    mvprintw(1, 25, "q: quit");
    mvprintw(2, 25, "a: accelerometer range ± 2g");
    mvprintw(3, 25, "g: gyroscope range     ± 250°/s");
+   mvprintw(4, 25, "p: standard power");
 
    while ((in = fgetc(file)) != EOF) {
       if (isalpha(in)) { //Make sure we don't read the middle of a transmission
@@ -91,6 +95,10 @@ int main()
             gyroSensitivity = 131;
             mvprintw(3, 49, " 250°/s");
             break;
+         case 'p':
+            fputc('p', file);
+            togglePower();
+            break;
       }
 
       refresh();
@@ -101,6 +109,16 @@ int main()
    return EXIT_SUCCESS;
 }
 
+void togglePower()
+{
+   if (powerState == 0) {
+      mvprintw(4, 25, "p: low power     ");
+      powerState = 1;
+   } else {
+      mvprintw(4, 25, "p: standard power");
+      powerState = 0;
+   }
+}
 void nextAccelRange()
 {
    switch(accelSensitivity) {
