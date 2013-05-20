@@ -21,13 +21,20 @@
 void messageSend(char tag, int dataUp, int dataDown);
 void nextRange(char reg);
 void startSelfTest();
+void initPCINT();
+
+char newData;
 
 int main()
 {
-   DDRB = 0xFF;
-   DDRC = 0xFF;   // Port C contains the pins for i2c
    int in = 0;
    unsigned char data[6];
+   newData = 1;
+
+   DDRC = 0xFF;   // Port C contains the pins for i2c
+
+   DDRD &= ~(1<<PD2); //Pin D2 as input for interrupts
+   PORTD |= 1<<PD2;
 
    usart_init(9600, F_CPU );
 
@@ -50,22 +57,33 @@ int main()
    }
 
    write_reg(0x6B, 0x02); //Disable sleep, use Y gyro for clocking
-   write_reg(0x38, 0x40); //Enable motion interrupts
-   write_reg(0x1F, 20);   //Detect motion larger than 32mg*20=0.64g
-   _delay_ms(2);          //Short delay to accumulate samples
-   write_reg(0x6C, 0xC0); //Wakeup frequency of 40 Hz
-   write_reg(0x6B, 0x22); //Enable sleeping between polls
+
+/*
+ *   //Code to enable interrupts, non-functional at the moment
+ *
+ *   write_reg(0x38, 0x40); //Enable motion interrupts
+ *   write_reg(0x37, 0x60); //Interrupt is held until cleared, active high
+ *   write_reg(0x1F, 20);   //Detect motion larger than 32mg*20=0.64g
+ *   _delay_ms(2);          //Short delay to accumulate samples
+ *   write_reg(0x6C, 0xC0); //Wakeup frequency of 40 Hz
+ *   write_reg(0x6B, 0x22); //Enable sleeping between polls
+ *   initPCINT(); //Enable interrupts on D2 (PCINT18)
+ *   sei();
+ */
+
 
    while (1) {
-      read_reg_multiple(data, 0x3B, 6); //Read the accelerometer registers
-      messageSend('x', data[0], data[1]);
-      messageSend('y', data[2], data[3]);
-      messageSend('z', data[3], data[4]);
+      if (newData == 1) {
+         read_reg_multiple(data, 0x3B, 6); //Read the accelerometer registers
+         messageSend('x', data[0], data[1]);
+         messageSend('y', data[2], data[3]);
+         messageSend('z', data[3], data[4]);
 
-      read_reg_multiple(data, 0x43, 6); //Read the gyroscope registers
-      messageSend('r', data[0], data[1]);
-      messageSend('p', data[2], data[3]);
-      messageSend('Y', data[3], data[4]);
+         read_reg_multiple(data, 0x43, 6); //Read the gyroscope registers
+         messageSend('r', data[0], data[1]);
+         messageSend('p', data[2], data[3]);
+         messageSend('Y', data[3], data[4]);
+      }
 
       //parse control inputs
       while (usart_istheredata()) {
@@ -84,6 +102,20 @@ int main()
    }
 
    return 0;
+}
+
+void initPCINT(void)
+{
+   PCICR |= (1<<2);  // enable PCINT23..16
+   PCMSK2 |= (1<<2); // enable PCINT18 interrupt
+   PCIFR |= 0x04;  // clear previous interrupts
+}
+
+ISR(PCINT2_vect)
+{
+   read_reg(0x3A); // Clear interrupt status on MPU
+   newData = 1;
+   PCIFR |= 0x04;  // clear pending interrupts
 }
 
 void startSelfTest()

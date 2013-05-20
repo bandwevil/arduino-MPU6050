@@ -53,7 +53,7 @@ int main()
    cbreak();   //Don't wait for return to get input
    timeout(0); //input is non-blocking
 
-   attron(A_UNDERLINE);
+   attron(A_UNDERLINE); //Print titles with underlines
    mvprintw(0, 0, "Acceleration");
    mvprintw(5, 0, "Rotation");
    mvprintw(0, 25, "Controls");
